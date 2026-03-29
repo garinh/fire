@@ -148,6 +148,12 @@ const LEVELS = [
   }
 ];
 
+const MUSIC_LEVEL_CAP = 5;
+
+function clampMusicLevel(levelId) {
+  return Math.min(Math.max(levelId, 1), MUSIC_LEVEL_CAP);
+}
+
 // --- MAIN COMPONENT ---
 export default function App() {
   const [currentLevelIdx, setCurrentLevelIdx] = useState(0);
@@ -173,6 +179,47 @@ export default function App() {
 
   const [renderTrigger, setRenderTrigger] = useState(0);
   const level = LEVELS[currentLevelIdx];
+
+  const musicRef = useRef(null);
+  const musicTrackKeyRef = useRef('');
+
+  useEffect(() => {
+    const el = new Audio();
+    el.loop = true;
+    el.volume = 0.55;
+    musicRef.current = el;
+    return () => {
+      musicTrackKeyRef.current = '';
+      el.pause();
+      musicRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const el = musicRef.current;
+    if (!el) return;
+
+    let key;
+    let src;
+    if (gameState === 'menu') {
+      key = 'main';
+      src = '/music/main.ogg';
+    } else if (gameState === 'playing') {
+      const n = clampMusicLevel(level.id);
+      key = `run-${n}`;
+      src = `/music/run_${n}.ogg`;
+    } else {
+      const n = clampMusicLevel(level.id);
+      key = `build-${n}`;
+      src = `/music/build_${n}.ogg`;
+    }
+
+    if (musicTrackKeyRef.current === key) return;
+    musicTrackKeyRef.current = key;
+    el.src = src;
+    el.load();
+    el.play().catch(() => {});
+  }, [gameState, level.id]);
 
   const initLevel = (lvlIdx) => {
     const lvl = LEVELS[lvlIdx];
