@@ -7,6 +7,10 @@ const GRID_H = 12;
 const CELL_SIZE = 40;
 const HOME_POS = { x: 7, y: 5, w: 2, h: 2 }; // 2x2 home in the center
 
+/** Ladder-fuel ignition: full tree ember count; pruned uses half (rounded down, min 1). */
+const HAZARD_IGNITION_EMBERS = 3;
+const HAZARD_IGNITION_EMBERS_PRUNED = Math.max(1, Math.floor(HAZARD_IGNITION_EMBERS / 2));
+
 // Calculate distance from any tile to the closest edge of the 2x2 home
 const getDistToHome = (x, y) => {
   const hx = Math.max(HOME_POS.x, Math.min(x, HOME_POS.x + 1));
@@ -60,6 +64,14 @@ const TOWER_TYPES = {
     icon: '🧱',
     desc: 'Disrupts paths. Completely blocks ground fires until destroyed.',
     placement: 'grid'
+  },
+  PRUNE: {
+    id: 'prune',
+    name: 'Prune Hazard',
+    cost: 10,
+    icon: '🌿',
+    desc: 'Pruning to reduce flammability.',
+    placement: 'hazard'
   },
   REMOVE: {
     id: 'remove',
@@ -118,7 +130,7 @@ const LEVELS = [
   {
     id: 3,
     title: 'Level 3: Ladder Fuels',
-    eduText: 'Junipers are highly flammable. If a ground fire touches one, it erupts into multiple deadly embers! Use the "Clear Hazard" tool to remove them during the build phase.',
+    eduText: 'Junipers are highly flammable. If a ground fire touches one, it erupts into embers! Prune to reduce spread, or clear them entirely during the build phase.',
     budget: 1500,
     hazards: [{x: 4, y: 3}, {x: 11, y: 3}, {x: 9, y: 9}, {x: 3, y: 8}, {x: 12, y: 7}],
     infrastructure: COMMON_INFRASTRUCTURE,
@@ -292,7 +304,12 @@ export default function App() {
       timeElapsed: 0,
       enemies: [],
       towers: [],
-      hazards: [...lvl.hazards],
+      hazards: lvl.hazards.map((h) => ({
+        x: h.x,
+        y: h.y,
+        pruned: Boolean(h.pruned),
+        charred: Boolean(h.charred),
+      })),
       infrastructure: lvl.infrastructure || [],
       upgrades: { gutters: false, vents: false },
       wavesSpawned: 0,
@@ -406,21 +423,27 @@ export default function App() {
             } 
           }
 
-          // Hazard Ignition
+          // Hazard Ignition (pruned: half embers, then charred stump; charred stumps don't re-ignite)
           for (let j = engine.hazards.length - 1; j >= 0; j--) {
             const h = engine.hazards[j];
+            if (h.charred) continue;
             if (Math.abs(centerX - (h.x + 0.5)) < 0.8 && Math.abs(centerY - (h.y + 0.5)) < 0.8) {
-              // Ignite hazard!
-              engine.hazards.splice(j, 1);
-              // Spawn 3 embers instantly
-              for(let k = 0; k < 3; k++) {
+              const emberCount = h.pruned ? HAZARD_IGNITION_EMBERS_PRUNED : HAZARD_IGNITION_EMBERS;
+              for (let k = 0; k < emberCount; k++) {
                 engine.enemies.push({
                   id: Math.random().toString(),
                   type: 'ember',
-                  x: h.x + Math.random() * 0.5 - 0.25, 
+                  x: h.x + Math.random() * 0.5 - 0.25,
                   y: h.y + Math.random() * 0.5 - 0.25,
-                  hp: 30, maxHp: 30, speed: 2.5
+                  hp: 30,
+                  maxHp: 30,
+                  speed: 2.5,
                 });
+              }
+              if (h.pruned) {
+                engine.hazards[j] = { x: h.x, y: h.y, charred: true };
+              } else {
+                engine.hazards.splice(j, 1);
               }
             }
           }
@@ -564,6 +587,17 @@ export default function App() {
     const hasTower = engine.towers.some(t => t.x === x && t.y === y);
     const hasHazard = engine.hazards.some(h => h.x === x && h.y === y);
     const hasInfra = engine.infrastructure.some(i => i.x === x && i.y === y);
+
+    if (selectedTool === 'PRUNE') {
+      const hazardIdx = engine.hazards.findIndex((h) => h.x === x && h.y === y);
+      if (hazardIdx !== -1 && !engine.hazards[hazardIdx].pruned && !engine.hazards[hazardIdx].charred) {
+        engine.hazards[hazardIdx] = { ...engine.hazards[hazardIdx], pruned: true };
+        engine.money -= tool.cost;
+        playSfxOneShot('/sfx/click.wav');
+        setRenderTrigger((val) => val + 1);
+      }
+      return;
+    }
 
     if (selectedTool === 'REMOVE') {
       const hazardIdx = engine.hazards.findIndex(h => h.x === x && h.y === y);
@@ -858,6 +892,9 @@ export default function App() {
                       
                       if (selectedTool === 'REMOVE') {
                         isValid = hasHazard && canAfford;
+                      } else if (selectedTool === 'PRUNE') {
+                        const haz = engine.hazards.find((hh) => hh.x === x && hh.y === y);
+                        isValid = !!haz && !haz.pruned && !haz.charred && canAfford;
                       } else if (tool.placement === 'home') {
                         isValid = isHome && canAfford;
                         if (isHome) {
@@ -905,11 +942,43 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Hazards */}
+                {/* Hazards (live tree → pruned tree → charred stump after pruned ignition) */}
                 {engine.hazards.map((h, i) => (
-                  <div key={`haz-${i}`} className="absolute text-3xl flex items-center justify-center animate-pulse z-10 pointer-events-none"
-                       style={{ left: h.x*CELL_SIZE, top: h.y*CELL_SIZE, width: CELL_SIZE, height: CELL_SIZE }}>
-                    🌲
+                  <div
+                    key={`haz-${i}`}
+                    className={`absolute flex flex-col items-center justify-center z-10 pointer-events-none ${
+                      h.charred
+                        ? 'ring-2 ring-stone-600/60 ring-inset rounded-md bg-stone-900/40'
+                        : h.pruned
+                          ? 'ring-2 ring-amber-500/70 ring-inset rounded-md bg-amber-950/25'
+                          : ''
+                    }`}
+                    style={{ left: h.x * CELL_SIZE, top: h.y * CELL_SIZE, width: CELL_SIZE, height: CELL_SIZE }}
+                    title={
+                      h.charred
+                        ? 'Charred stump — spent ladder fuel'
+                        : h.pruned
+                          ? 'Pruned — fewer embers if ignited; becomes stump'
+                          : 'Ladder fuel'
+                    }
+                  >
+                    {h.charred ? (
+                      <>
+                        <span className="text-2xl opacity-95 grayscale-[0.35]">🪵</span>
+                        <span className="text-[10px] font-bold uppercase tracking-tight text-stone-400 leading-none mt-0.5">
+                          Stump
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className={`text-3xl ${h.pruned ? 'opacity-80 scale-95' : 'animate-pulse'}`}>🌲</span>
+                        {h.pruned && (
+                          <span className="text-[10px] font-bold uppercase tracking-tight text-amber-300/95 leading-none mt-0.5">
+                            Pruned
+                          </span>
+                        )}
+                      </>
+                    )}
                   </div>
                 ))}
 
@@ -1001,7 +1070,7 @@ export default function App() {
                 <div className="text-xs space-y-2">
                   <div className="flex items-center gap-2"><span>🔥</span> <strong>Ground Fire:</strong> Creeps towards home.</div>
                   <div className="flex items-center gap-2"><span>✨</span> <strong>Ember:</strong> Flies over grid defenses. Spawns from flames.</div>
-                  <div className="flex items-center gap-2"><span>🌲</span> <strong>Ladder Fuel:</strong> Hazard! Spawns embers if ignited.</div>
+                  <div className="flex items-center gap-2"><span>🌲</span> <strong>Ladder Fuel:</strong> Ignited trees spawn {HAZARD_IGNITION_EMBERS} embers; <strong>pruned</strong> spawn half ({HAZARD_IGNITION_EMBERS_PRUNED}), then a stump. 🪵 Stumps don&apos;t re-ignite.</div>
                 </div>
               </div>
             </div>
