@@ -573,6 +573,16 @@ export default function App() {
 
   const engine = engineRef.current;
 
+  const homeIntegrityRatio =
+    engine.homeMaxHp > 0 ? Math.max(0, Math.min(1, engine.homeHp / engine.homeMaxHp)) : 0;
+  const homeDamageStress = gameState === 'playing' ? 1 - homeIntegrityRatio : 0;
+  const homeStressStyle =
+    gameState === 'playing'
+      ? {
+          backgroundColor: `rgb(${Math.round(38 + homeDamageStress * 145)}, ${Math.round(38 * (1 - homeDamageStress * 0.78))}, ${Math.round(38 * (1 - homeDamageStress * 0.78))})`,
+        }
+      : undefined;
+
   return (
     <div className="min-h-screen bg-neutral-900 text-neutral-100 font-sans flex flex-col items-center py-8 select-none">
       
@@ -752,8 +762,16 @@ export default function App() {
 
                 {/* The Home Structure (2x2) - pointer-events-none ensures grid clicks work underneath */}
                 <div 
-                  className="absolute bg-neutral-800 border-4 border-neutral-700 rounded-md flex flex-col items-center justify-center drop-shadow-xl z-10 pointer-events-none"
-                  style={{ left: HOME_POS.x*CELL_SIZE, top: HOME_POS.y*CELL_SIZE, width: HOME_POS.w*CELL_SIZE, height: HOME_POS.h*CELL_SIZE }}
+                  className={`absolute border-4 border-neutral-700 rounded-md flex flex-col items-center justify-center drop-shadow-xl z-10 pointer-events-none transition-[background-color] duration-300 ease-out ${
+                    gameState === 'playing' ? '' : 'bg-neutral-800'
+                  }`}
+                  style={{
+                    left: HOME_POS.x * CELL_SIZE,
+                    top: HOME_POS.y * CELL_SIZE,
+                    width: HOME_POS.w * CELL_SIZE,
+                    height: HOME_POS.h * CELL_SIZE,
+                    ...homeStressStyle,
+                  }}
                 >
                   <span className="text-4xl mb-1">🏠</span>
                   <div className="flex gap-1">
