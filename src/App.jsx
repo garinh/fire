@@ -725,16 +725,16 @@ export default function App() {
           </p>
           <div className="grid grid-cols-3 gap-4 mb-8 text-left">
             <div className="bg-neutral-700/50 p-4 rounded-lg">
-              <span className="text-red-400 font-bold">Zone 0 (0-5 ft)</span><br/>
-              <span className="text-sm text-neutral-300">Non-combustible area. Use gravel and wall barriers.</span>
+              <span className="text-red-400 font-bold">Zone 0</span><br/>
+              <span className="text-sm text-neutral-300">Ember-proof your home and immediate surroundings using gravel and ember-proof barriers.</span>
             </div>
             <div className="bg-neutral-700/50 p-4 rounded-lg">
-              <span className="text-orange-400 font-bold">Zone 1 (5-30 ft)</span><br/>
-              <span className="text-sm text-neutral-300">Lean, clean, green. High-moisture succulents intercept fire.</span>
+              <span className="text-orange-400 font-bold">Zone 1</span><br/>
+              <span className="text-sm text-neutral-300">Lean, clean, and green. Use fire-resistant plants.</span>
             </div>
             <div className="bg-neutral-700/50 p-4 rounded-lg">
-              <span className="text-blue-400 font-bold">The Home</span><br/>
-              <span className="text-sm text-neutral-300">Clean gutters and install mesh vents to survive embers.</span>
+              <span className="text-green-400 font-bold">Zone 2</span><br/>
+              <span className="text-sm text-neutral-300">Reduce fuel through maintenance and design.</span>
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8 max-w-md mx-auto">
@@ -943,7 +943,7 @@ export default function App() {
               
               {/* Legend */}
               <div className="flex justify-center gap-6 text-sm text-neutral-300 mt-4">
-                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-900/60 rounded-sm border border-red-500/50"></div> Zone 0: Non-Combustible</div>
+                <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-900/60 rounded-sm border border-red-500/50"></div> Zone 0: Ember-proofing zone</div>
                 <div className="flex items-center gap-2"><div className="w-3 h-3 bg-orange-900/60 rounded-sm border border-orange-500/50"></div> Zone 1: Lean & Green</div>
                 <div className="flex items-center gap-2"><div className="w-3 h-3 bg-green-900/60 rounded-sm border border-green-500/50"></div> Zone 2: Reduce Fuel</div>
               </div>
@@ -958,7 +958,7 @@ export default function App() {
               {gameState === 'build' && (
                 <div className="mb-4 bg-blue-900/30 text-blue-300 p-3 rounded-lg text-sm border border-blue-800/50 flex gap-2 items-start">
                   <Info className="w-4 h-4 mt-0.5 shrink-0" />
-                  <p><strong>Build Phase:</strong> Prepare defenses. Flames approach from random edges!</p>
+                  <p><strong>Build Phase:</strong> Prepare defenses.</p>
                 </div>
               )}
               
