@@ -154,11 +154,8 @@ function clampMusicLevel(levelId) {
   return Math.min(Math.max(levelId, 1), MUSIC_LEVEL_CAP);
 }
 
-function playSfxOneShot(src, volume = 0.65) {
-  const a = new Audio(src);
-  a.volume = volume;
-  a.play().catch(() => {});
-}
+const MUSIC_VOLUME_ON = 0.75;
+const SFX_VOLUME_ON = 1;
 
 // --- MAIN COMPONENT ---
 export default function App() {
@@ -166,6 +163,20 @@ export default function App() {
   const [gameState, setGameState] = useState('menu'); 
   const [selectedTool, setSelectedTool] = useState(null);
   const [mousePos, setMousePos] = useState({ x: -1, y: -1 });
+  const [musicEnabled, setMusicEnabled] = useState(false);
+  const [sfxEnabled, setSfxEnabled] = useState(false);
+
+  const sfxEnabledRef = useRef(sfxEnabled);
+  useEffect(() => {
+    sfxEnabledRef.current = sfxEnabled;
+  }, [sfxEnabled]);
+
+  const playSfxOneShot = (src, volume = SFX_VOLUME_ON) => {
+    if (!sfxEnabled) return;
+    const a = new Audio(src);
+    a.volume = volume;
+    a.play().catch(() => {});
+  };
 
   // Game Engine State (Refs for performance in animation loop)
   const engineRef = useRef({
@@ -194,10 +205,10 @@ export default function App() {
   useEffect(() => {
     const fire = new Audio('/sfx/fire.wav');
     fire.loop = true;
-    fire.volume = 0.38;
+    fire.volume = 0;
     const ember = new Audio('/sfx/embers.wav');
     ember.loop = true;
-    ember.volume = 0.34;
+    ember.volume = 0;
     fireSfxRef.current = fire;
     emberSfxRef.current = ember;
     return () => {
@@ -216,9 +227,20 @@ export default function App() {
   }, [gameState]);
 
   useEffect(() => {
+    if (!sfxEnabled) {
+      const f = fireSfxRef.current;
+      const e = emberSfxRef.current;
+      f?.pause();
+      e?.pause();
+      if (f) f.volume = 0;
+      if (e) e.volume = 0;
+    }
+  }, [sfxEnabled]);
+
+  useEffect(() => {
     const el = new Audio();
     el.loop = true;
-    el.volume = 0.55;
+    el.volume = 0;
     musicRef.current = el;
     return () => {
       musicTrackKeyRef.current = '';
@@ -246,12 +268,18 @@ export default function App() {
       src = `/music/build_${n}.ogg`;
     }
 
-    if (musicTrackKeyRef.current === key) return;
-    musicTrackKeyRef.current = key;
-    el.src = src;
-    el.load();
-    el.play().catch(() => {});
-  }, [gameState, level.id]);
+    if (musicTrackKeyRef.current !== key) {
+      musicTrackKeyRef.current = key;
+      el.src = src;
+      el.load();
+    }
+    el.volume = musicEnabled ? MUSIC_VOLUME_ON : 0;
+    if (musicEnabled) {
+      el.play().catch(() => {});
+    } else {
+      el.pause();
+    }
+  }, [gameState, level.id, musicEnabled]);
 
   const initLevel = (lvlIdx) => {
     const lvl = LEVELS[lvlIdx];
@@ -477,17 +505,26 @@ export default function App() {
       const fireSfx = fireSfxRef.current;
       const emberSfx = emberSfxRef.current;
       if (fireSfx && emberSfx) {
-        const hasFireEnemy = engine.enemies.some((e) => e.type === 'fire');
-        const hasEmberEnemy = engine.enemies.some((e) => e.type === 'ember');
-        if (hasFireEnemy) {
-          if (fireSfx.paused) fireSfx.play().catch(() => {});
-        } else {
+        const sfxOn = sfxEnabledRef.current;
+        const v = sfxOn ? SFX_VOLUME_ON : 0;
+        fireSfx.volume = v;
+        emberSfx.volume = v;
+        if (!sfxOn) {
           fireSfx.pause();
-        }
-        if (hasEmberEnemy) {
-          if (emberSfx.paused) emberSfx.play().catch(() => {});
-        } else {
           emberSfx.pause();
+        } else {
+          const hasFireEnemy = engine.enemies.some((e) => e.type === 'fire');
+          const hasEmberEnemy = engine.enemies.some((e) => e.type === 'ember');
+          if (hasFireEnemy) {
+            if (fireSfx.paused) fireSfx.play().catch(() => {});
+          } else {
+            fireSfx.pause();
+          }
+          if (hasEmberEnemy) {
+            if (emberSfx.paused) emberSfx.play().catch(() => {});
+          } else {
+            emberSfx.pause();
+          }
         }
       }
 
@@ -655,6 +692,50 @@ export default function App() {
               <span className="text-blue-400 font-bold">The Home</span><br/>
               <span className="text-sm text-neutral-300">Clean gutters and install mesh vents to survive embers.</span>
             </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8 max-w-md mx-auto">
+            <label className="flex items-center justify-between gap-4 bg-neutral-700/50 px-4 py-3 rounded-xl border border-neutral-600 w-full sm:w-56">
+              <span className="text-neutral-200 font-medium">Music</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={musicEnabled}
+                aria-label={`Music ${musicEnabled ? 'on' : 'off'}`}
+                onClick={() => setMusicEnabled((v) => !v)}
+                className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${musicEnabled ? 'bg-orange-500' : 'bg-neutral-600'}`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${musicEnabled ? 'translate-x-5' : ''}`}
+                />
+              </button>
+            </label>
+            <label className="flex items-center justify-between gap-4 bg-neutral-700/50 px-4 py-3 rounded-xl border border-neutral-600 w-full sm:w-56">
+              <span className="text-neutral-200 font-medium">SFX</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={sfxEnabled}
+                aria-label={`Sound effects ${sfxEnabled ? 'on' : 'off'}`}
+                onClick={() => {
+                  setSfxEnabled((prev) => {
+                    const next = !prev;
+                    if (next) {
+                      queueMicrotask(() => {
+                        const a = new Audio('/sfx/click.wav');
+                        a.volume = SFX_VOLUME_ON;
+                        a.play().catch(() => {});
+                      });
+                    }
+                    return next;
+                  });
+                }}
+                className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${sfxEnabled ? 'bg-orange-500' : 'bg-neutral-600'}`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${sfxEnabled ? 'translate-x-5' : ''}`}
+                />
+              </button>
+            </label>
           </div>
           <button 
             onClick={() => initLevel(0)}
