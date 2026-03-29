@@ -154,6 +154,12 @@ function clampMusicLevel(levelId) {
   return Math.min(Math.max(levelId, 1), MUSIC_LEVEL_CAP);
 }
 
+function playSfxOneShot(src, volume = 0.65) {
+  const a = new Audio(src);
+  a.volume = volume;
+  a.play().catch(() => {});
+}
+
 // --- MAIN COMPONENT ---
 export default function App() {
   const [currentLevelIdx, setCurrentLevelIdx] = useState(0);
@@ -182,6 +188,32 @@ export default function App() {
 
   const musicRef = useRef(null);
   const musicTrackKeyRef = useRef('');
+  const fireSfxRef = useRef(null);
+  const emberSfxRef = useRef(null);
+
+  useEffect(() => {
+    const fire = new Audio('/sfx/fire.wav');
+    fire.loop = true;
+    fire.volume = 0.38;
+    const ember = new Audio('/sfx/embers.wav');
+    ember.loop = true;
+    ember.volume = 0.34;
+    fireSfxRef.current = fire;
+    emberSfxRef.current = ember;
+    return () => {
+      fire.pause();
+      ember.pause();
+      fireSfxRef.current = null;
+      emberSfxRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (gameState !== 'playing') {
+      fireSfxRef.current?.pause();
+      emberSfxRef.current?.pause();
+    }
+  }, [gameState]);
 
   useEffect(() => {
     const el = new Audio();
@@ -442,6 +474,23 @@ export default function App() {
         }
       }
 
+      const fireSfx = fireSfxRef.current;
+      const emberSfx = emberSfxRef.current;
+      if (fireSfx && emberSfx) {
+        const hasFireEnemy = engine.enemies.some((e) => e.type === 'fire');
+        const hasEmberEnemy = engine.enemies.some((e) => e.type === 'ember');
+        if (hasFireEnemy) {
+          if (fireSfx.paused) fireSfx.play().catch(() => {});
+        } else {
+          fireSfx.pause();
+        }
+        if (hasEmberEnemy) {
+          if (emberSfx.paused) emberSfx.play().catch(() => {});
+        } else {
+          emberSfx.pause();
+        }
+      }
+
       // Check win/loss
       if (engine.homeHp <= 0) {
         setGameState('lost');
@@ -482,6 +531,7 @@ export default function App() {
       if (hazardIdx !== -1) {
         engine.hazards.splice(hazardIdx, 1);
         engine.money -= tool.cost;
+        playSfxOneShot('/sfx/click.wav');
         setRenderTrigger(val => val + 1);
       }
       return;
@@ -494,9 +544,11 @@ export default function App() {
           engine.homeMaxHp += 50;
           engine.homeHp += 50;
           engine.money -= tool.cost;
+          playSfxOneShot('/sfx/click.wav');
         } else if (selectedTool === 'VENTS' && !engine.upgrades.vents) {
           engine.upgrades.vents = true;
           engine.money -= tool.cost;
+          playSfxOneShot('/sfx/click.wav');
         }
         setRenderTrigger(val => val + 1);
       }
@@ -513,6 +565,7 @@ export default function App() {
           hp: tool.hp
         });
         engine.money -= tool.cost;
+        playSfxOneShot('/sfx/click.wav');
         setRenderTrigger(val => val + 1);
       }
     }
