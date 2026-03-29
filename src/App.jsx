@@ -104,7 +104,7 @@ const LEVELS = [
     id: 1,
     title: 'Level 1: The Basics of Zone 1',
     eduText: 'Ground fires are approaching! Place Succulents and Retaining Walls on the grid, and click the home to apply Gutter and Vent upgrades.',
-    budget: 900,
+    budget: 750,
     hazards: [],
     infrastructure: COMMON_INFRASTRUCTURE,
     waves: [
@@ -117,7 +117,7 @@ const LEVELS = [
     id: 2,
     title: 'Level 2: The Airborne Threat',
     eduText: 'Active flames will occasionally launch Embers into the air that fly over walls straight to the house. Upgrade the home with Clean Gutters and Mesh Vents to survive!',
-    budget: 1200,
+    budget: 1000,
     hazards: [],
     infrastructure: COMMON_INFRASTRUCTURE,
     waves: [
@@ -131,7 +131,7 @@ const LEVELS = [
     id: 3,
     title: 'Level 3: Ladder Fuels',
     eduText: 'Junipers are highly flammable. If a ground fire touches one, it erupts into embers! Prune to reduce spread, or clear them entirely during the build phase.',
-    budget: 1500,
+    budget: 1300,
     hazards: [{x: 4, y: 3}, {x: 11, y: 3}, {x: 9, y: 9}, {x: 3, y: 8}, {x: 12, y: 7}],
     infrastructure: COMMON_INFRASTRUCTURE,
     waves: [
@@ -145,7 +145,7 @@ const LEVELS = [
     id: 4,
     title: 'Level 4: Red Flag Warning',
     eduText: 'High winds and dry conditions. Fires move faster and spawn embers more frequently. Use a combination of Zone 0 Gravel, Zone 1 Succulents, and Structural Upgrades!',
-    budget: 2400,
+    budget: 1800,
     hazards: [{x: 2, y: 2}, {x: 13, y: 2}, {x: 13, y: 9}, {x: 2, y: 9}, {x: 7, y: 2}, {x: 5, y: 10}],
     infrastructure: COMMON_INFRASTRUCTURE,
     speedMultiplier: 1.3,
