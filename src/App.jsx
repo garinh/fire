@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, Info, RotateCcw, ChevronRight } from 'lucide-react';
+import { Shield, Info, RotateCcw, ChevronRight, ChevronLeft } from 'lucide-react';
 
 // --- GAME CONSTANTS & CONFIGURATION ---
 const GRID_W = 16;
@@ -149,6 +149,8 @@ const LEVELS = [
 ];
 
 const MUSIC_LEVEL_CAP = 5;
+/** Highest campaign level id the player can select in build phase (arrows). */
+const MAX_SELECTABLE_LEVEL_ID = 5;
 
 function clampMusicLevel(levelId) {
   return Math.min(Math.max(levelId, 1), MUSIC_LEVEL_CAP);
@@ -620,6 +622,14 @@ export default function App() {
         }
       : undefined;
 
+  let maxSelectableLevelIndex = 0;
+  for (let i = 0; i < LEVELS.length; i++) {
+    if (LEVELS[i].id <= MAX_SELECTABLE_LEVEL_ID) maxSelectableLevelIndex = i;
+  }
+  const canLevelDown = gameState === 'build' && currentLevelIdx > 0;
+  const canLevelUp =
+    gameState === 'build' && currentLevelIdx < maxSelectableLevelIndex;
+
   return (
     <div className="min-h-screen bg-neutral-900 text-neutral-100 font-sans flex flex-col items-center py-8 select-none">
       
@@ -668,6 +678,40 @@ export default function App() {
               </div>
               <div className="text-xs text-neutral-500 mt-1">{Math.max(0, Math.floor(engine.homeHp))} / {engine.homeMaxHp}</div>
             </div>
+            {gameState === 'build' && (
+              <>
+                <div className="w-px h-10 bg-neutral-700" />
+                <div className="flex items-center gap-1 pl-1">
+                  <span className="text-xs text-neutral-500 uppercase tracking-wide mr-1">Level</span>
+                  <button
+                    type="button"
+                    title="Previous level"
+                    aria-label="Previous level"
+                    disabled={!canLevelDown}
+                    onClick={() => canLevelDown && initLevel(currentLevelIdx - 1)}
+                    className="p-1.5 rounded-lg border border-neutral-600 bg-neutral-700/80 text-neutral-200 hover:bg-neutral-600 hover:text-white disabled:opacity-35 disabled:pointer-events-none transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <span
+                    className="min-w-[2rem] text-center text-xl font-bold text-orange-300 tabular-nums px-1"
+                    aria-live="polite"
+                  >
+                    {level.id}
+                  </span>
+                  <button
+                    type="button"
+                    title="Next level"
+                    aria-label="Next level"
+                    disabled={!canLevelUp}
+                    onClick={() => canLevelUp && initLevel(currentLevelIdx + 1)}
+                    className="p-1.5 rounded-lg border border-neutral-600 bg-neutral-700/80 text-neutral-200 hover:bg-neutral-600 hover:text-white disabled:opacity-35 disabled:pointer-events-none transition-colors"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
