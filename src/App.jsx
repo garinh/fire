@@ -5,6 +5,7 @@ import { Shield, Info, RotateCcw, ChevronRight, ChevronLeft } from 'lucide-react
 const GRID_W = 16;
 const GRID_H = 12;
 const CELL_SIZE = 40;
+const MIN_CELL_SIZE = 24;
 const HOME_POS = { x: 7, y: 5, w: 2, h: 2 }; // 2x2 home in the center
 
 /** Ladder-fuel ignition: full tree ember count; pruned uses half (rounded down, min 1). */
@@ -210,6 +211,18 @@ export default function App() {
 
   const [renderTrigger, setRenderTrigger] = useState(0);
   const level = LEVELS[currentLevelIdx];
+  const [viewport, setViewport] = useState(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }));
+
+  useEffect(() => {
+    const onResize = () => {
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const musicRef = useRef(null);
   const musicTrackKeyRef = useRef('');
@@ -663,6 +676,13 @@ export default function App() {
   const canLevelDown = gameState === 'build' && currentLevelIdx > 0;
   const canLevelUp =
     gameState === 'build' && currentLevelIdx < maxSelectableLevelIndex;
+  const sidePanelWidth = viewport.width < 640 ? 224 : viewport.width < 1024 ? 256 : 320;
+  const maxCellByWidth = Math.floor((viewport.width - sidePanelWidth - 96) / GRID_W);
+  const maxCellByHeight = Math.floor((viewport.height - 340) / GRID_H);
+  const cellSize = Math.max(
+    MIN_CELL_SIZE,
+    Math.min(CELL_SIZE, maxCellByWidth || CELL_SIZE, maxCellByHeight || CELL_SIZE)
+  );
 
   return (
     <div className="min-h-screen bg-neutral-900 text-neutral-100 font-sans flex flex-col items-center py-8 select-none">
@@ -751,13 +771,13 @@ export default function App() {
       </div>
 
       {gameState === 'menu' && (
-        <div className="bg-neutral-800 p-8 rounded-2xl max-w-2xl text-center border border-neutral-700 shadow-2xl mt-12">
-          <h2 className="text-4xl font-bold mb-4 text-orange-400">Fire Defense</h2>
-          <p className="text-lg text-neutral-300 mb-6 leading-relaxed">
+        <div className="bg-neutral-800 p-4 sm:p-6 lg:p-8 rounded-2xl w-full max-w-4xl text-center border border-neutral-700 shadow-2xl mt-6 sm:mt-10 lg:mt-12 mx-2 sm:mx-4">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 text-orange-400">Fire Defense</h2>
+          <p className="text-sm sm:text-base lg:text-lg text-neutral-300 mb-5 sm:mb-6 leading-relaxed">
             Wildfires spread through creeping ground flames and flying embers. 
             Protect the home by applying real-world fire resilience principles to the Home Ignition Zone (HIZ).
           </p>
-          <div className="grid grid-cols-3 gap-4 mb-8 text-left">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8 text-left">
             <div className="bg-neutral-700/50 p-4 rounded-lg">
               <span className="text-red-400 font-bold">Zone 0</span><br/>
               <span className="text-sm text-neutral-300">Ember-proof your home and immediate surroundings using gravel and ember-proof barriers.</span>
@@ -771,7 +791,7 @@ export default function App() {
               <span className="text-sm text-neutral-300">Reduce fuel through maintenance and design.</span>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8 max-w-md mx-auto">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center mb-6 sm:mb-8 max-w-md mx-auto">
             <label className="flex items-center justify-between gap-4 bg-neutral-700/50 px-4 py-3 rounded-xl border border-neutral-600 w-full sm:w-56">
               <span className="text-neutral-200 font-medium">Music</span>
               <button
@@ -817,7 +837,7 @@ export default function App() {
           </div>
           <button 
             onClick={() => initLevel(0)}
-            className="bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform hover:scale-105"
+            className="bg-orange-600 hover:bg-orange-500 text-white font-bold py-2.5 px-6 sm:py-3 sm:px-8 rounded-full text-base sm:text-lg transition-transform hover:scale-105"
           >
             Start Campaign
           </button>
@@ -825,7 +845,7 @@ export default function App() {
       )}
 
       {(gameState === 'playing' || gameState === 'build' || gameState === 'won' || gameState === 'lost') && (
-        <div className="flex w-full max-w-7xl gap-6 px-4">
+        <div className="flex w-full max-w-7xl gap-4 px-2 sm:px-4 overflow-x-auto">
           
           <div className="flex-1">
             <div className="bg-neutral-800 rounded-2xl p-4 border border-neutral-700 shadow-xl relative">
@@ -840,12 +860,12 @@ export default function App() {
 
               <div 
                 className="relative bg-neutral-900 border-2 border-neutral-700 rounded overflow-hidden shadow-inner cursor-crosshair"
-                style={{ width: GRID_W * CELL_SIZE, height: GRID_H * CELL_SIZE, margin: '0 auto' }}
+                style={{ width: GRID_W * cellSize, height: GRID_H * cellSize, margin: '0 auto' }}
                 onMouseMove={(e) => {
                   const rect = e.currentTarget.getBoundingClientRect();
                   setMousePos({
-                    x: Math.floor((e.clientX - rect.left) / CELL_SIZE),
-                    y: Math.floor((e.clientY - rect.top) / CELL_SIZE)
+                    x: Math.floor((e.clientX - rect.left) / cellSize),
+                    y: Math.floor((e.clientY - rect.top) / cellSize)
                   });
                 }}
                 onMouseLeave={() => setMousePos({x:-1, y:-1})}
@@ -869,7 +889,7 @@ export default function App() {
                       <div 
                         key={`bg-${x}-${y}`} 
                         className={`absolute border border-black/10 ${color} ${infraClasses}`} 
-                        style={{ left: x * CELL_SIZE, top: y * CELL_SIZE, width: CELL_SIZE, height: CELL_SIZE }} 
+                        style={{ left: x * cellSize, top: y * cellSize, width: cellSize, height: cellSize }} 
                       />
                     );
                   })
@@ -916,7 +936,7 @@ export default function App() {
                           ${isValid ? 'bg-green-500/30 border-green-400 cursor-pointer z-20 hover:bg-green-400/50 shadow-[inset_0_0_15px_rgba(74,222,128,0.3)]' : ''}
                           ${isInvalid ? 'cursor-not-allowed bg-red-500/20 z-20' : ''}
                         `}
-                        style={{ left: x*CELL_SIZE, top: y*CELL_SIZE, width: CELL_SIZE, height: CELL_SIZE }}
+                        style={{ left: x * cellSize, top: y * cellSize, width: cellSize, height: cellSize }}
                       />
                     );
                   })
@@ -928,10 +948,10 @@ export default function App() {
                     gameState === 'playing' ? '' : 'bg-neutral-800'
                   }`}
                   style={{
-                    left: HOME_POS.x * CELL_SIZE,
-                    top: HOME_POS.y * CELL_SIZE,
-                    width: HOME_POS.w * CELL_SIZE,
-                    height: HOME_POS.h * CELL_SIZE,
+                    left: HOME_POS.x * cellSize,
+                    top: HOME_POS.y * cellSize,
+                    width: HOME_POS.w * cellSize,
+                    height: HOME_POS.h * cellSize,
                     ...homeStressStyle,
                   }}
                 >
@@ -953,7 +973,7 @@ export default function App() {
                           ? 'ring-2 ring-amber-500/70 ring-inset rounded-md bg-amber-950/25'
                           : ''
                     }`}
-                    style={{ left: h.x * CELL_SIZE, top: h.y * CELL_SIZE, width: CELL_SIZE, height: CELL_SIZE }}
+                    style={{ left: h.x * cellSize, top: h.y * cellSize, width: cellSize, height: cellSize }}
                     title={
                       h.charred
                         ? 'Charred stump — spent ladder fuel'
@@ -985,7 +1005,7 @@ export default function App() {
                 {/* Towers */}
                 {engine.towers.map(t => (
                   <div key={t.id} className="absolute text-2xl flex items-center justify-center z-10 pointer-events-none"
-                       style={{ left: t.x*CELL_SIZE, top: t.y*CELL_SIZE, width: CELL_SIZE, height: CELL_SIZE }}>
+                       style={{ left: t.x * cellSize, top: t.y * cellSize, width: cellSize, height: cellSize }}>
                     {TOWER_TYPES[t.type.toUpperCase()].icon}
                     {t.hp < TOWER_TYPES[t.type.toUpperCase()].hp && (
                       <div className="absolute bottom-1 w-3/4 h-1 bg-red-900/80 rounded overflow-hidden">
@@ -998,7 +1018,7 @@ export default function App() {
                 {/* Enemies */}
                 {engine.enemies.map(e => (
                   <div key={e.id} className="absolute flex flex-col items-center justify-center transition-transform duration-75 z-20 pointer-events-none"
-                       style={{ transform: `translate(${e.x*CELL_SIZE}px, ${e.y*CELL_SIZE}px)`, width: CELL_SIZE, height: CELL_SIZE }}>
+                       style={{ transform: `translate(${e.x * cellSize}px, ${e.y * cellSize}px)`, width: cellSize, height: cellSize }}>
                     <div className={`text-2xl ${e.type === 'ember' ? 'animate-bounce drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]' : 'drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]'}`}>
                       {e.type === 'fire' ? '🔥' : '✨'}
                     </div>
@@ -1020,7 +1040,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="w-80 flex flex-col gap-4">
+          <div className="w-56 sm:w-64 lg:w-80 flex flex-col gap-4 shrink-0">
             <div className="bg-neutral-800 rounded-2xl p-4 border border-neutral-700 shadow-xl flex-1 overflow-y-auto max-h-[80vh]">
               <h3 className="text-xl font-bold mb-3 border-b border-neutral-700 pb-2">Defenses</h3>
               
