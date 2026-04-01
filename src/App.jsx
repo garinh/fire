@@ -169,7 +169,7 @@ function clampMusicLevel(levelId) {
   return Math.min(Math.max(levelId, 1), MUSIC_LEVEL_CAP);
 }
 
-const MUSIC_VOLUME_ON = 0.75;
+const MUSIC_VOLUME_ON = 0.375;
 const SFX_VOLUME_ON = 1;
 
 // --- MAIN COMPONENT ---
